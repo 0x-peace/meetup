@@ -1,0 +1,19 @@
+---
+node_labels:
+  group: "master"
+ 
+apiserver_extra_volumes:
+ - name: timezone
+   hostPath: /usr/share/zoneinfo/Asia/Almaty
+   mountPath: /etc/localtime
+   readOnly: true
+controller_manager_extra_volumes:
+ - name: timezone
+   hostPath: /usr/share/zoneinfo/Asia/Almaty
+   mountPath: /etc/localtime
+   readOnly: true
+scheduler_extra_volumes:
+ - name: timezone
+   hostPath: /usr/share/zoneinfo/Asia/Almaty
+   mountPath: /etc/localtime
+   readOnly: true

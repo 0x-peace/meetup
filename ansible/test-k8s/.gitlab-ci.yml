@@ -1,0 +1,42 @@
+variables:
+  K8S_PROD_INVENTORY: "core247/prod/inventory.ini"
+  K8S_CORE247_PROD_KUBESPRAY_VERSION: "v2.26.0"
+
+.k8s-prod-prepare:
+  stage: core247-prod
+  image: python:alpine3.19
+  tags:
+    - ansible
+  only:
+    refs:
+      - schedules
+      - branches
+    changes:
+      - core247/prod/**/*
+  before_script:
+    - apk --no-cache add git sshpass bash openssh jq
+    - bash core247/prod/k8s-core247-prod.sh
+    - mkdir -p ~/.ssh
+    - cp "$SSH_PRIVATE_KEY" $HOME/.ssh/id_rsa
+    - chmod 600 $HOME/.ssh/id_rsa
+    - export ANSIBLE_CONFIG=$(pwd)/ansible.cfg
+
+k8s-prod-cluster:
+  extends: .k8s-prod-prepare
+  when: manual
+  script:
+    - >
+      ansible-playbook -i ${K8S_PROD_INVENTORY} 
+      roles/kubespray/cluster.yml -Kkb -uansible
+      --extra-vars "${ANSIBLE_EXTRA_VARS}"
+      --ssh-common-arg "${ANSIBLE_SSH_COMMON_ARGS}"
+
+k8s-prod-upgrade:
+  extends: .k8s-prod-prepare
+  when: manual
+  script:
+    - >
+      ansible-playbook -i ${K8S_PROD_INVENTORY} 
+      roles/kubespray/upgrade-cluster.yml -e 'ansible_become_timeout=30' -Kkb -uansible
+      --extra-vars "${ANSIBLE_EXTRA_VARS}"
+      --ssh-common-arg "${ANSIBLE_SSH_COMMON_ARGS}"

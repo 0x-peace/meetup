@@ -1,0 +1,6 @@
+variables:
+  TERRAFORM_MODULE_SYSTEM: "yandexcloud"
+
+include:
+  - project: 'ci-tools/templates'
+    file: 'deploy/deploy_terraform_module.yml'

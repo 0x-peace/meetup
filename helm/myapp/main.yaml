@@ -1,0 +1,39 @@
+configMap:
+  BACKEND_URL_LOCAL: https://api.stage.smartdeal.kz
+  BACKEND_URL_DEV: https://api.stage.smartdeal.kz
+  BACKEND_URL_PROD: https://api.stage.smartdeal.kz
+  BASE_URL: ${BACKEND_URL_DEV}/api
+
+env:
+  TZ: "Asia/Aqtobe"
+  BACKEND_URL_LOCAL: https://api.stage.smartdeal.kz
+  BACKEND_URL_DEV: https://api.stage.smartdeal.kz
+  BACKEND_URL_PROD: https://api.stage.smartdeal.kz
+  BASE_URL: ${BACKEND_URL_DEV}/api
+  
+resources:
+  limits:
+    cpu: 0.5
+    memory: 512Mi
+  requests:
+    cpu: 0.25
+    memory: 256Mi
+
+ingress:
+  enabled: true
+  annotations: 
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: smartdeal.kz
+      paths:
+        - /
+  tls:
+    - secretName: smartdeal-kz-tls
+      hosts:
+        - smartdeal.kz
+
+strategy:
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 0

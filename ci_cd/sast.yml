@@ -1,0 +1,59 @@
+variables:
+  DOCKER_BUILD_ARG: '' # Define in mail yaml like "--build-arg CI_COMMIT_TAG --build-arg CI_COMMIT_SHA"
+  REGISTRY: 'git-registry.egs.kz'
+  IMAGE_NAME: "$REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME:$CI_COMMIT_REF_SLUG-$CI_PIPELINE_ID"
+
+include:
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+
+stages:
+  - pre-build
+  - containerize
+  - test
+  - deploy
+
+secret_detection:
+  stage: pre-build
+  allow_failure: true
+
+semgrep-sast:
+  stage: pre-build
+
+docker-image:
+  stage: containerize
+  image: docker:19.03
+  tags:
+    - docker
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - echo "${IMAGE_NAME}"
+    - docker build ${DOCKER_BUILD_ARG} -t ${IMAGE_NAME} .
+    - docker push ${IMAGE_NAME}
+    - docker rmi ${IMAGE_NAME}
+
+unit-tests:
+  stage: test
+  image: docker:19.03
+  tags:
+    - docker
+  script:
+    - echo "running unit tests"
+
+
+k8s-stage-deploy:
+  image: ${REGISTRY}/docker-images/helm:3.3.0
+  stage: deploy
+  only:
+    - main
+  tags:
+    - docker
+  script:
+    - export RELEASE_NAME="${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}"
+    - echo "Deploy to kubernetes dev cluster"
+    - mkdir -p ~/.kube
+    - echo ${K8S_CONFIG} | base64 -d > ~/.kube/config
+    - > 
+      helm upgrade --install ${RELEASE_NAME} --namespace=myapp
+      --set image.name=${IMAGE_NAME}
+      .helm

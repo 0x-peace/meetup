@@ -1,0 +1,88 @@
+alertmanager:
+  enable: false
+  ingress:
+    enabled: false
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    hosts:
+      - alertmanager.mpsolutions.kz
+  config:
+    global:
+      resolve_timeout: 5m
+    inhibit_rules:
+      - source_matchers:
+          - 'severity = critical'
+        target_matchers:
+          - 'severity =~ warning|info'
+        equal:
+          - 'alertname'
+      - source_matchers:
+          - 'severity = warning'
+        target_matchers:
+          - 'severity = info'
+        equal:
+          - 'alertname'
+      - source_matchers:
+          - 'alertname = InfoInhibitor'
+        target_matchers:
+          - 'severity = info'
+        equal:
+          - 'namespace'
+      - target_matchers:
+          - 'alertname = InfoInhibitor'
+    route:
+      group_by: ['...']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'core247-oncall'
+      routes:
+      - receiver: 'null'
+        continue: false
+        matchers:
+          - alertname =~ "InfoInhibitor|Watchdog"
+      - receiver: 'core247-oncall'
+        continue: true
+        matchers:
+          - severity =~ "info|none|warning|critical"
+
+    receivers:
+      - name: core247-oncall
+        webhook_configs:
+        - send_resolved: true
+          url: https://oncall.egs.kz/integrations/v1/alertmanager/x3KRlPz4QjW8gpikwTNbNaL4J/
+      - name: 'null' 
+  
+    templates:
+    - '/etc/alertmanager/config/*.tmpl'
+
+grafana:
+  enabled: true
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - grafana.example.kz
+    tls: []
+    #- secretName: grafana-prod-tls
+    #  hosts:
+    #  - grafana.mpsolutions.kz
+
+prometheus:
+  enabled: true
+
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    labels: {}
+    hosts:
+      - prometheus.example.kz
+    paths:
+      - /
+    tls: []
+    #- secretName: prometheus-general-tls
+    #  hosts:
+    #    - prometheus.example.kz
